@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#090711">
+<title>APO STARS ✨</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#090711;--panel:#151020;--purple:#9b5cff;--pink:#d06bff;--muted:#aaa0bb;--tile:#9b5cff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#24113c 0%,#090711 55%);color:#fff;font-family:system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;justify-content:center}
+.app{width:min(100%,480px);padding:18px 15px 26px}
+header{text-align:center;margin:8px 0 18px}h1{margin:0;font-size:31px;letter-spacing:1px;color:#d5b2ff;text-shadow:0 0 16px #9b5cff}header p{margin:5px 0;color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.stat{background:#171122;border:1px solid #49316b;border-radius:15px;padding:12px;text-align:center;box-shadow:0 0 18px #7c35b51a}.stat small{display:block;color:var(--muted);font-size:12px}.stat b{font-size:24px;color:#e6d4ff}
+.board-wrap{background:#120d1d;border:1px solid #55347b;padding:10px;border-radius:18px;box-shadow:0 0 25px #8c38ff25}
+.board{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;aspect-ratio:1}
+.cell{background:#251b34;border:1px solid #332445;border-radius:6px;min-width:0;aspect-ratio:1;transition:background .1s}
+.cell.filled{background:linear-gradient(145deg,#c18aff,#7837d9);border-color:#d6b2ff;box-shadow:inset 0 0 7px #fff5,0 0 8px #9b5cff55}
+.hint{text-align:center;color:var(--muted);font-size:12px;margin:12px 0}
+.pieces{display:flex;justify-content:space-around;align-items:center;gap:8px;margin:14px 0 10px;min-height:95px}
+.piece{background:#171122;border:1px solid #3e2b58;border-radius:14px;min-width:30%;min-height:84px;display:flex;align-items:center;justify-content:center;padding:10px;cursor:pointer}
+.piece.selected{border:2px solid #c18aff;box-shadow:0 0 15px #9b5cff66;background:#241535}
+.shape{display:grid;gap:4px}.block{width:19px;height:19px;border-radius:4px;background:#9b5cff;box-shadow:inset 0 0 5px #fff6}
+button{width:100%;border:0;border-radius:13px;padding:13px;background:linear-gradient(90deg,#7b35d4,#b35cff);color:white;font-weight:800;font-size:15px;margin-top:8px}
+.note{text-align:center;color:#857991;font-size:11px;line-height:1.7;margin-top:13px}
+.overlay{position:fixed;inset:0;background:#05030bdc;display:none;align-items:center;justify-content:center;padding:20px}.modal{background:#191126;border:1px solid #9b5cff;border-radius:20px;padding:24px;text-align:center;width:min(100%,330px);box-shadow:0 0 30px #9b5cff55}.modal h2{color:#d5b2ff}
+</style>
+</head>
+<body>
+<main class="app">
+<header><h1>APO STARS ✨</h1><p>بچین، امتیاز بگیر، رکوردت رو بشکن!</p></header>
+<section class="stats"><div class="stat"><small>امتیاز فعلی</small><b id="score">0</b></div><div class="stat"><small>بهترین رکورد این دستگاه</small><b id="best">0</b></div></section>
+<div class="board-wrap"><div class="board" id="board" aria-label="صفحه بازی"></div></div>
+<p class="hint" id="hint">اول یک شکل رو انتخاب کن، بعد روی خانه‌های صفحه بزن.</p>
+<section class="pieces" id="pieces"></section>
+<button id="restart">شروع دوباره</button>
+<p class="note">نسخه آزمایشی APO STARS · امتیازها فعلاً فقط روی همین دستگاه ذخیره می‌شوند؛ هنوز جایزه واقعی یا ثبت آنلاین فعال نیست.</p>
+</main>
+<div class="overlay" id="overlay"><div class="modal"><h2>بازی تموم شد!</h2><p>امتیازت: <b id="finalScore">0</b></p><button id="again">دوباره بازی کن</button></div></div>
+<script>
+const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand();}
+const N=8, boardEl=document.getElementById('board'), piecesEl=document.getElementById('pieces');
+const shapes=[[[0,0]],[[0,0],[0,1]],[[0,0],[1,0]],[[0,0],[0,1],[1,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,0],[2,0]],[[0,0],[0,1],[1,0],[1,1]],[[0,0],[0,1],[0,2],[1,1]],[[0,0],[1,0],[2,0],[2,1]]];
+let grid=[],score=0,best=Number(localStorage.getItem('apoBest')||0),pieces=[],selected=-1;
+const scoreEl=document.getElementById('score'),bestEl=document.getElementById('best');
+bestEl.textContent=best;
+function newGame(){grid=Array.from({length:N},()=>Array(N).fill(0));score=0;selected=-1;scoreEl.textContent=0;document.getElementById('overlay').style.display='none';makePieces();render();}
+function makePieces(){pieces=Array.from({length:3},()=>shapes[Math.floor(Math.random()*shapes.length)]);selected=-1;renderPieces();}
+function render(){boardEl.innerHTML='';for(let r=0;r<N;r++)for(let c=0;c<N;c++){let el=document.createElement('div');el.className='cell'+(grid[r][c]?' filled':'');el.addEventListener('click',()=>place(r,c));boardEl.appendChild(el);}renderPieces();}
+function renderPieces(){piecesEl.innerHTML='';pieces.forEach((shape,i)=>{let box=document.createElement('div');box.className='piece'+(selected===i?' selected':'');box.addEventListener('click',()=>{if(!shape)return;selected=i;renderPieces();document.getElementById('hint').textContent='حالا محل قرارگیری شکل رو روی صفحه انتخاب کن.';});let maxR=Math.max(...shape.map(p=>p[0]))+1,maxC=Math.max(...shape.map(p=>p[1]))+1;let s=document.createElement('div');s.className='shape';s.style.gridTemplateColumns=`repeat(${maxC},19px)`;for(let r=0;r<maxR;r++)for(let c=0;c<maxC;c++){let b=document.createElement('div');b.className='block';b.style.visibility=shape.some(p=>p[0]===r&&p[1]===c)?'visible':'hidden';s.appendChild(b);}if(!shape)box.style.opacity='.2';box.appendChild(s);piecesEl.appendChild(box);});}
+function canPlace(shape,r,c){return shape.every(([dr,dc])=>r+dr<N&&c+dc<N&&!grid[r+dr][c+dc]);}
+function place(r,c){if(selected<0||!pieces[selected])return;let shape=pieces[selected];if(!canPlace(shape,r,c)){document.getElementById('hint').textContent='این شکل اینجا جا نمی‌شه؛ جای دیگه‌ای امتحان کن.';return;}shape.forEach(([dr,dc])=>grid[r+dr][c+dc]=1);score+=shape.length;pieces[selected]=null;let rows=[],cols=[];for(let i=0;i<N;i++){if(grid[i].every(Boolean))rows.push(i);if(grid.every(row=>row[i]))cols.push(i);}for(let r0 of rows)for(let c0=0;c0<N;c0++)grid[r0][c0]=0;for(let c0 of cols)for(let r0=0;r0<N;r0++)grid[r0][c0]=0;score+=(rows.length+cols.length)*10;scoreEl.textContent=score;if(score>best){best=score;bestEl.textContent=best;localStorage.setItem('apoBest',best);}selected=-1;if(pieces.every(p=>!p))makePieces();render();if(!hasMove()){document.getElementById('finalScore').textContent=score;document.getElementById('overlay').style.display='flex';}}
+function hasMove(){return pieces.some(shape=>shape&&grid.some((row,r)=>row.some((v,c)=>canPlace(shape,r,c))));}
+document.getElementById('restart').onclick=newGame;document.getElementById('again').onclick=newGame;newGame();
+</script>
+</body></html>
